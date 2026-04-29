@@ -30,11 +30,9 @@ public class EnemyAI : MonoBehaviour
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
-
         if (animator == null)
         {
-            return;
-            //animator = GetComponent<Animator>();
+            animator = GetComponentInChildren<Animator>();
         }
     }
 
