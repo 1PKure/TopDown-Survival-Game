@@ -5,8 +5,12 @@ public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float rotationSpeed = 12f;
     [SerializeField] private float gravity = -20f;
+
+    [Header("Aim")]
+    [SerializeField] private Camera mainCamera;
+    [SerializeField] private LayerMask aimLayerMask;
+    [SerializeField] private float rotationSpeed = 20f;
 
     private CharacterController characterController;
     private Vector3 verticalVelocity;
@@ -14,11 +18,17 @@ public class PlayerMovement : MonoBehaviour
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
+
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
     }
 
     private void Update()
     {
         HandleMovement();
+        HandleAimRotation();
         ApplyGravity();
     }
 
@@ -29,12 +39,34 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
-        if (moveDirection.sqrMagnitude > 0.01f)
-        {
-            characterController.Move(moveDirection * moveSpeed * Time.deltaTime);
+        characterController.Move(moveDirection * moveSpeed * Time.deltaTime);
+    }
 
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+    private void HandleAimRotation()
+    {
+        if (mainCamera == null)
+        {
+            return;
+        }
+
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+
+        if (Physics.Raycast(ray, out RaycastHit hitInfo, 500f, aimLayerMask))
+        {
+            Vector3 lookDirection = hitInfo.point - transform.position;
+            lookDirection.y = 0f;
+
+            if (lookDirection.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
+
+            Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
         }
     }
 
