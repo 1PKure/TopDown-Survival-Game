@@ -10,6 +10,7 @@ public class EnemyPatrolBehaviour : StateMachineBehaviour
 
         if (enemy == null)
         {
+            Debug.LogError("EnemyBase not found from Patrol Behaviour.");
             return;
         }
 

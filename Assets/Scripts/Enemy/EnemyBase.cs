@@ -31,7 +31,10 @@ public abstract class EnemyBase : MonoBehaviour
     protected IDamageable targetDamageable;
 
     private int currentPatrolIndex;
-    private float waitTimer;
+    private float patrolWaitTimer;
+    private bool isWaitingAtPatrolPoint;
+    private bool patrolIndexInitialized;
+
     private float attackTimer;
 
     private static readonly int SpeedHash = Animator.StringToHash("speed");
@@ -41,13 +44,6 @@ public abstract class EnemyBase : MonoBehaviour
 
     public Transform Target => target;
     public NavMeshAgent Agent => agent;
-    public Animator Animator => animator;
-
-    public float DetectionRange => detectionRange;
-    public float LoseRange => loseRange;
-    public float PatrolSpeed => patrolSpeed;
-    public float ChaseSpeed => chaseSpeed;
-    public float AttackCooldown => attackCooldown;
 
     protected virtual void Awake()
     {
@@ -62,12 +58,16 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Start()
     {
-        if (target != null)
+        ResolveTargetDamageable();
+
+        if (healthComponent != null)
         {
-            targetDamageable = target.GetComponent<IDamageable>();
+            healthComponent.OnDeath += HandleDeath;
         }
 
-        healthComponent.OnDeath += Die;
+        SetChasing(false);
+        SetAttacking(false);
+        SetDead(false);
     }
 
     protected virtual void Update()
@@ -79,13 +79,39 @@ public abstract class EnemyBase : MonoBehaviour
     {
         if (healthComponent != null)
         {
-            healthComponent.OnDeath -= Die;
+            healthComponent.OnDeath -= HandleDeath;
         }
     }
 
-    public virtual bool HasTarget()
+    private void ResolveTargetDamageable()
     {
-        return target != null;
+        if (target == null)
+        {
+            Debug.LogWarning($"{name}: Target is not assigned.");
+            return;
+        }
+
+        targetDamageable = target.GetComponent<IDamageable>();
+
+        if (targetDamageable == null)
+        {
+            targetDamageable = target.GetComponentInParent<IDamageable>();
+        }
+
+        if (targetDamageable == null)
+        {
+            targetDamageable = target.GetComponentInChildren<IDamageable>();
+        }
+
+        if (targetDamageable == null)
+        {
+            Debug.LogWarning($"{name}: Target has no IDamageable / HealthComponent.");
+        }
+    }
+
+    public virtual bool IsTargetDead()
+    {
+        return targetDamageable != null && targetDamageable.IsDead;
     }
 
     public virtual float GetDistanceToTarget()
@@ -100,11 +126,21 @@ public abstract class EnemyBase : MonoBehaviour
 
     public virtual bool CanDetectTarget()
     {
+        if (target == null || IsTargetDead())
+        {
+            return false;
+        }
+
         return GetDistanceToTarget() <= detectionRange;
     }
 
     public virtual bool HasLostTarget()
     {
+        if (target == null || IsTargetDead())
+        {
+            return true;
+        }
+
         return GetDistanceToTarget() > loseRange;
     }
 
@@ -118,18 +154,34 @@ public abstract class EnemyBase : MonoBehaviour
         agent.isStopped = false;
         agent.speed = patrolSpeed;
 
-        if (patrolPoints != null && patrolPoints.Length > 0)
-        {
-            agent.SetDestination(patrolPoints[currentPatrolIndex].position);
-        }
-
-        waitTimer = 0f;
         SetChasing(false);
         SetAttacking(false);
+
+        patrolWaitTimer = 0f;
+        isWaitingAtPatrolPoint = false;
+
+        if (patrolPoints == null || patrolPoints.Length == 0)
+        {
+            Debug.LogWarning($"{name}: No patrol points assigned.");
+            return;
+        }
+
+        if (!patrolIndexInitialized)
+        {
+            currentPatrolIndex = Random.Range(0, patrolPoints.Length);
+            patrolIndexInitialized = true;
+        }
+
+        SetPatrolDestination();
     }
 
     public virtual void UpdatePatrol()
     {
+        if (agent == null)
+        {
+            return;
+        }
+
         if (patrolPoints == null || patrolPoints.Length == 0)
         {
             return;
@@ -140,21 +192,55 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
-        if (agent.remainingDistance > agent.stoppingDistance)
+        if (!isWaitingAtPatrolPoint && agent.remainingDistance <= agent.stoppingDistance)
+        {
+            isWaitingAtPatrolPoint = true;
+            patrolWaitTimer = 0f;
+
+            agent.isStopped = true;
+            agent.ResetPath();
+
+            return;
+        }
+
+        if (!isWaitingAtPatrolPoint)
         {
             return;
         }
 
-        waitTimer += Time.deltaTime;
+        patrolWaitTimer += Time.deltaTime;
 
-        if (waitTimer < patrolWaitTime)
+        if (patrolWaitTimer < patrolWaitTime)
         {
             return;
         }
 
         currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
-        agent.SetDestination(patrolPoints[currentPatrolIndex].position);
-        waitTimer = 0f;
+
+        isWaitingAtPatrolPoint = false;
+        patrolWaitTimer = 0f;
+
+        agent.isStopped = false;
+
+        SetPatrolDestination();
+    }
+
+    private void SetPatrolDestination()
+    {
+        if (patrolPoints == null || patrolPoints.Length == 0)
+        {
+            return;
+        }
+
+        Transform patrolPoint = patrolPoints[currentPatrolIndex];
+
+        if (patrolPoint == null)
+        {
+            Debug.LogWarning($"{name}: Patrol point at index {currentPatrolIndex} is null.");
+            return;
+        }
+
+        agent.SetDestination(patrolPoint.position);
     }
 
     public virtual void StartChase()
@@ -179,6 +265,7 @@ public abstract class EnemyBase : MonoBehaviour
         }
 
         agent.isStopped = false;
+        agent.speed = chaseSpeed;
         agent.SetDestination(target.position);
     }
 
@@ -192,7 +279,6 @@ public abstract class EnemyBase : MonoBehaviour
 
         attackTimer = attackCooldown;
 
-        SetChasing(false);
         SetAttacking(true);
     }
 
@@ -202,11 +288,13 @@ public abstract class EnemyBase : MonoBehaviour
 
         attackTimer += Time.deltaTime;
 
-        if (attackTimer >= attackCooldown)
+        if (attackTimer < attackCooldown)
         {
-            attackTimer = 0f;
-            Attack();
+            return;
         }
+
+        attackTimer = 0f;
+        Attack();
     }
 
     protected virtual void Attack()
@@ -262,6 +350,17 @@ public abstract class EnemyBase : MonoBehaviour
         );
     }
 
+    public virtual void StopMovement()
+    {
+        if (agent == null)
+        {
+            return;
+        }
+
+        agent.isStopped = true;
+        agent.ResetPath();
+    }
+
     public virtual void SetChasing(bool value)
     {
         if (animator == null)
@@ -302,21 +401,13 @@ public abstract class EnemyBase : MonoBehaviour
         animator.SetFloat(SpeedHash, agent.velocity.magnitude);
     }
 
-    private void Die()
+    private void HandleDeath()
     {
-        if (agent != null)
-        {
-            agent.isStopped = true;
-            agent.ResetPath();
-        }
+        StopMovement();
 
         SetChasing(false);
         SetAttacking(false);
         SetDead(true);
-
-        // Después conectamos score y destroy:
-        // ScoreManager.Instance.AddScore(scoreValue);
-        // Destroy(gameObject, 3f);
     }
 
     protected virtual void OnDrawGizmosSelected()

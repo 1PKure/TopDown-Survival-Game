@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class RangedEnemy : EnemyBase
 {
@@ -14,6 +15,11 @@ public class RangedEnemy : EnemyBase
 
     public override bool CanAttack()
     {
+        if (IsTargetDead())
+        {
+            return false;
+        }
+
         float distance = GetDistanceToTarget();
 
         return distance <= idealAttackRange && distance > tooCloseRange;
@@ -21,6 +27,11 @@ public class RangedEnemy : EnemyBase
 
     public override bool ShouldRetreat()
     {
+        if (IsTargetDead())
+        {
+            return false;
+        }
+
         return GetDistanceToTarget() <= tooCloseRange;
     }
 
@@ -32,11 +43,14 @@ public class RangedEnemy : EnemyBase
         }
 
         Vector3 retreatDirection = (transform.position - target.position).normalized;
-        Vector3 retreatPosition = transform.position + retreatDirection * retreatDistance;
+        Vector3 desiredPosition = transform.position + retreatDirection * retreatDistance;
 
-        agent.isStopped = false;
-        agent.speed = chaseSpeed;
-        agent.SetDestination(retreatPosition);
+        if (NavMesh.SamplePosition(desiredPosition, out NavMeshHit hit, retreatDistance, NavMesh.AllAreas))
+        {
+            agent.isStopped = false;
+            agent.speed = chaseSpeed;
+            agent.SetDestination(hit.position);
+        }
     }
 
     protected override void Attack()
@@ -51,20 +65,32 @@ public class RangedEnemy : EnemyBase
             return;
         }
 
+        Vector3 direction = target.position - firePoint.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.01f)
+        {
+            return;
+        }
+
+        direction.Normalize();
+
+        Quaternion projectileRotation = Quaternion.LookRotation(direction);
+
         GameObject projectileInstance = Instantiate(
             projectilePrefab,
             firePoint.position,
-            firePoint.rotation
+            projectileRotation
         );
 
         EnemyProjectile projectile = projectileInstance.GetComponent<EnemyProjectile>();
 
         if (projectile == null)
         {
+            Debug.LogWarning($"{name}: Projectile prefab does not have EnemyProjectile component.");
             return;
         }
 
-        Vector3 direction = (target.position - firePoint.position).normalized;
         projectile.Initialize(direction, projectileSpeed, attackDamage);
     }
 

@@ -7,6 +7,11 @@ public class MeleeEnemy : EnemyBase
 
     public override bool CanAttack()
     {
+        if (IsTargetDead())
+        {
+            return false;
+        }
+
         return GetDistanceToTarget() <= attackRange;
     }
 

@@ -10,6 +10,7 @@ public class EnemyAttackBehaviour : StateMachineBehaviour
 
         if (enemy == null)
         {
+            Debug.LogError("EnemyBase not found from Attack Behaviour.");
             return;
         }
 
@@ -20,6 +21,13 @@ public class EnemyAttackBehaviour : StateMachineBehaviour
     {
         if (enemy == null)
         {
+            return;
+        }
+
+        if (enemy.IsTargetDead())
+        {
+            enemy.SetAttacking(false);
+            enemy.SetChasing(false);
             return;
         }
 
