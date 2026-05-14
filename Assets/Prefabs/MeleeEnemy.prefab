@@ -115,6 +115,8 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   patrolWaitTime: 1.5
+  scoreValue: 100
+  destroyDelay: 2
   detectionRange: 8
   loseRange: 12
   patrolSpeed: 1.8
@@ -230,6 +232,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Survivor A Lusth@Orc Idle
       objectReference: {fileID: 0}
+    - target: {fileID: 4589172278139151157, guid: 8b8e8b72dee6b3a48a94edbff31105a9, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 9523d9589fe959f44adc9c9fb4fda380, type: 2}
+    - target: {fileID: 4589172278139151157, guid: 8b8e8b72dee6b3a48a94edbff31105a9, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 9523d9589fe959f44adc9c9fb4fda380, type: 2}
     - target: {fileID: 5866666021909216657, guid: 8b8e8b72dee6b3a48a94edbff31105a9, type: 3}
       propertyPath: m_Controller
       value: 

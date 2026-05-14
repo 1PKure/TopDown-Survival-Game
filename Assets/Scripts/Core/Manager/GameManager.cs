@@ -4,11 +4,16 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     private bool isGameOver;
-
+    [SerializeField] private EnemySpawner enemySpawner;
     public bool IsGameOver => isGameOver;
 
     public void GameOver()
     {
+        if (enemySpawner != null)
+        {
+            enemySpawner.StopSpawning();
+        }
+        
         if (isGameOver)
         {
             return;

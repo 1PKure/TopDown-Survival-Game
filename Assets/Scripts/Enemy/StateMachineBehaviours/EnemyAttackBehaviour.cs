@@ -19,6 +19,11 @@ public class EnemyAttackBehaviour : StateMachineBehaviour
 
     public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
+        if (enemy.IsDead)
+        {
+            return;
+        }
+        
         if (enemy == null)
         {
             return;

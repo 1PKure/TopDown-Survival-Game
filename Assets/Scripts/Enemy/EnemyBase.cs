@@ -12,7 +12,9 @@ public abstract class EnemyBase : MonoBehaviour
     [Header("Patrol")]
     [SerializeField] protected Transform[] patrolPoints;
     [SerializeField] protected float patrolWaitTime = 1.5f;
-
+    [Header("Reward")]
+    [SerializeField] protected int scoreValue = 100;
+    [SerializeField] protected float destroyDelay = 2f;
     [Header("Detection")]
     [SerializeField] protected float detectionRange = 8f;
     [SerializeField] protected float loseRange = 12f;
@@ -27,6 +29,8 @@ public abstract class EnemyBase : MonoBehaviour
     [SerializeField] protected float attackCooldown = 1.2f;
 
     protected NavMeshAgent agent;
+    private bool isDead;
+    public bool IsDead => isDead;
     protected HealthComponent healthComponent;
     protected IDamageable targetDamageable;
 
@@ -83,7 +87,7 @@ public abstract class EnemyBase : MonoBehaviour
         }
     }
 
-    private void ResolveTargetDamageable()
+    public void ResolveTargetDamageable()
     {
         if (target == null)
         {
@@ -151,20 +155,20 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
-        agent.isStopped = false;
-        agent.speed = patrolSpeed;
-
         SetChasing(false);
         SetAttacking(false);
-
-        patrolWaitTimer = 0f;
-        isWaitingAtPatrolPoint = false;
 
         if (patrolPoints == null || patrolPoints.Length == 0)
         {
             Debug.LogWarning($"{name}: No patrol points assigned.");
             return;
         }
+
+        agent.isStopped = false;
+        agent.speed = patrolSpeed;
+
+        patrolWaitTimer = 0f;
+        isWaitingAtPatrolPoint = false;
 
         if (!patrolIndexInitialized)
         {
@@ -240,7 +244,14 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
 
-        agent.SetDestination(patrolPoint.position);
+        if (NavMesh.SamplePosition(patrolPoint.position, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(hit.position);
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: Patrol point {patrolPoint.name} is not near a valid NavMesh area.");
+        }
     }
 
     public virtual void StartChase()
@@ -403,11 +414,27 @@ public abstract class EnemyBase : MonoBehaviour
 
     private void HandleDeath()
     {
+        if (isDead)
+        {
+            return;
+        }
+
+        isDead = true;
+
         StopMovement();
 
         SetChasing(false);
         SetAttacking(false);
         SetDead(true);
+
+        ScoreManager scoreManager = FindFirstObjectByType<ScoreManager>();
+
+        if (scoreManager != null)
+        {
+            scoreManager.AddScore(scoreValue);
+        }
+
+        Destroy(gameObject, destroyDelay);
     }
 
     protected virtual void OnDrawGizmosSelected()
@@ -417,5 +444,28 @@ public abstract class EnemyBase : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, loseRange);
+    }
+    public virtual void SetTarget(Transform newTarget)
+    {
+        target = newTarget;
+        ResolveTargetDamageable();
+    }
+
+    public virtual void SetPatrolPoints(Transform[] newPatrolPoints)
+    {
+        patrolPoints = newPatrolPoints;
+
+        if (patrolPoints == null || patrolPoints.Length == 0)
+        {
+            Debug.LogWarning($"{name}: Patrol points were assigned but the array is empty.");
+            return;
+        }
+
+        if (agent == null)
+        {
+            return;
+        }
+
+        StartPatrol();
     }
 }
