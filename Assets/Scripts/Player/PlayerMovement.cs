@@ -15,6 +15,8 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController characterController;
     private Vector3 verticalVelocity;
 
+    private float currentSpeedMultiplier = 1f;
+
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
@@ -39,7 +41,9 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
-        characterController.Move(moveDirection * moveSpeed * Time.deltaTime);
+        float finalMoveSpeed = moveSpeed * currentSpeedMultiplier;
+
+        characterController.Move(moveDirection * finalMoveSpeed * Time.deltaTime);
     }
 
     private void HandleAimRotation()
@@ -79,5 +83,21 @@ public class PlayerMovement : MonoBehaviour
 
         verticalVelocity.y += gravity * Time.deltaTime;
         characterController.Move(verticalVelocity * Time.deltaTime);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.TryGetComponent(out SlowZone slowZone))
+        {
+            currentSpeedMultiplier = slowZone.SpeedMultiplier;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.TryGetComponent(out SlowZone slowZone))
+        {
+            currentSpeedMultiplier = 1f;
+        }
     }
 }
