@@ -6,6 +6,11 @@ public class ScoreManager : MonoBehaviour
 
     public int CurrentScore => currentScore;
 
+    private void Start()
+    {
+        GameFeedbackUI.Instance?.SetScore(currentScore);
+    }
+
     public void AddScore(int amount)
     {
         if (amount <= 0)
@@ -15,14 +20,13 @@ public class ScoreManager : MonoBehaviour
 
         currentScore += amount;
 
-        Debug.Log($"Score: {currentScore}");
-
-        // Later:
-        // HUD.UpdateScore(currentScore);
+        GameFeedbackUI.Instance?.SetScore(currentScore);
+        GameFeedbackUI.Instance?.ShowMessage($"+{amount} Score");
     }
 
     public void ResetScore()
     {
         currentScore = 0;
+        GameFeedbackUI.Instance?.SetScore(currentScore);
     }
 }

@@ -76,6 +76,7 @@ public class EnemySpawner : MonoBehaviour
             if (CanSpawn())
             {
                 SpawnEnemy();
+                GameFeedbackUI.Instance?.AddEnemy();
             }
         }
     }

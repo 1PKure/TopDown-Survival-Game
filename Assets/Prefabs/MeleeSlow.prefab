@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 7040755526884405276}
   - component: {fileID: 2897043460443465461}
   - component: {fileID: -5615746507848460284}
+  - component: {fileID: -50773815515623570}
   m_Layer: 0
   m_Name: MeleeSlow
   m_TagString: Untagged
@@ -202,6 +203,25 @@ MonoBehaviour:
   npcDetectionRange: 8
   targetRefreshRate: 0.25
   prioritizeNpcIfCloser: 1
+--- !u!114 &-50773815515623570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 360472969064998480}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d9177a1b3376d44a9ff1203b25dd505, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerHealth: {fileID: 0}
+  lowHealthThreshold: 0.3
+  speedMultiplier: 1.25
+  damageMultiplier: 1.25
+  cooldownMultiplier: 0.75
+  rangeMultiplier: 1.2
+  checkRate: 0.25
 --- !u!1 &1883091129457383783
 GameObject:
   m_ObjectHideFlags: 0

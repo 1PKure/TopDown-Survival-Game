@@ -5,6 +5,7 @@ public class PlayerWeapon : MonoBehaviour
     [Header("References")]
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private Transform firePoint;
+    [SerializeField] private PlayerAmmo playerAmmo;
 
     [Header("Weapon")]
     [SerializeField] private int damage = 25;
@@ -13,6 +14,19 @@ public class PlayerWeapon : MonoBehaviour
     [SerializeField] private float projectileMaxDistance = 10f;
 
     private float nextShootTime;
+
+    private void Awake()
+    {
+        if (playerAmmo == null)
+        {
+            playerAmmo = GetComponent<PlayerAmmo>();
+        }
+
+        if (playerAmmo == null)
+        {
+            playerAmmo = GetComponentInParent<PlayerAmmo>();
+        }
+    }
 
     private void Update()
     {
@@ -37,6 +51,17 @@ public class PlayerWeapon : MonoBehaviour
         if (projectilePrefab == null || firePoint == null)
         {
             Debug.LogWarning($"{name}: Projectile prefab or fire point is missing.");
+            return;
+        }
+
+        if (playerAmmo == null)
+        {
+            Debug.LogWarning($"{name}: PlayerAmmo reference is missing.");
+            return;
+        }
+
+        if (!playerAmmo.TryConsumeAmmo())
+        {
             return;
         }
 

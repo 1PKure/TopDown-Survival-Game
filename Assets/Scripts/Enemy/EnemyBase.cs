@@ -38,7 +38,14 @@ public abstract class EnemyBase : MonoBehaviour
     private float patrolWaitTimer;
     private bool isWaitingAtPatrolPoint;
     private bool patrolIndexInitialized;
+    private float baseDetectionRange;
+    private float baseLoseRange;
+    private float basePatrolSpeed;
+    private float baseChaseSpeed;
+    private int baseAttackDamage;
+    private float baseAttackCooldown;
 
+    private bool isAggressive;
     private float attackTimer;
 
     private static readonly int SpeedHash = Animator.StringToHash("speed");
@@ -53,7 +60,12 @@ public abstract class EnemyBase : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         healthComponent = GetComponent<HealthComponent>();
-
+        baseDetectionRange = detectionRange;
+        baseLoseRange = loseRange;
+        basePatrolSpeed = patrolSpeed;
+        baseChaseSpeed = chaseSpeed;
+        baseAttackDamage = attackDamage;
+        baseAttackCooldown = attackCooldown;
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
@@ -420,7 +432,7 @@ public abstract class EnemyBase : MonoBehaviour
         }
 
         isDead = true;
-
+        GameFeedbackUI.Instance?.RemoveEnemy();
         StopMovement();
 
         SetChasing(false);
@@ -467,5 +479,42 @@ public abstract class EnemyBase : MonoBehaviour
         }
 
         StartPatrol();
+    }
+
+    public virtual void SetAggressiveMode(
+    bool shouldBeAggressive,
+    float speedMultiplier,
+    float damageMultiplier,
+    float cooldownMultiplier,
+    float rangeMultiplier
+)
+    {
+        if (isAggressive == shouldBeAggressive)
+        {
+            return;
+        }
+
+        isAggressive = shouldBeAggressive;
+
+        if (isAggressive)
+        {
+            detectionRange = baseDetectionRange * rangeMultiplier;
+            loseRange = baseLoseRange * rangeMultiplier;
+            patrolSpeed = basePatrolSpeed * speedMultiplier;
+            chaseSpeed = baseChaseSpeed * speedMultiplier;
+            attackDamage = Mathf.RoundToInt(baseAttackDamage * damageMultiplier);
+            attackCooldown = baseAttackCooldown * cooldownMultiplier;
+
+            GameFeedbackUI.Instance?.ShowMessage("Enemies became more aggressive.");
+        }
+        else
+        {
+            detectionRange = baseDetectionRange;
+            loseRange = baseLoseRange;
+            patrolSpeed = basePatrolSpeed;
+            chaseSpeed = baseChaseSpeed;
+            attackDamage = baseAttackDamage;
+            attackCooldown = baseAttackCooldown;
+        }
     }
 }
