@@ -13,6 +13,9 @@ public class RescueNpc : MonoBehaviour, IDamageable
     [SerializeField] private int scoreReward = 250;
     [SerializeField] private int ammoReward = 10;
 
+    [Header("Penalty")]
+    [SerializeField] private int playerKillPenalty = 200;
+
     [Header("References")]
     [SerializeField] private Transform player;
     [SerializeField] private GameObject visualRoot;
@@ -72,6 +75,16 @@ public class RescueNpc : MonoBehaviour, IDamageable
 
     public void TakeDamage(int damage)
     {
+        ApplyDamage(damage, false);
+    }
+
+    public void TakeDamageFromPlayer(int damage)
+    {
+        ApplyDamage(damage, true);
+    }
+
+    private void ApplyDamage(int damage, bool causedByPlayer)
+    {
         if (isDead || isRescued)
         {
             return;
@@ -84,7 +97,7 @@ public class RescueNpc : MonoBehaviour, IDamageable
 
         if (currentHealth <= 0)
         {
-            Die();
+            Die(causedByPlayer);
         }
     }
 
@@ -126,7 +139,7 @@ public class RescueNpc : MonoBehaviour, IDamageable
         Destroy(gameObject);
     }
 
-    private void Die()
+    private void Die(bool killedByPlayer)
     {
         if (isDead)
         {
@@ -135,7 +148,15 @@ public class RescueNpc : MonoBehaviour, IDamageable
 
         isDead = true;
 
-        GameFeedbackUI.Instance?.ShowMessage("The NPC died.");
+        if (killedByPlayer)
+        {
+            ApplyPlayerKillPenalty();
+            GameFeedbackUI.Instance?.ShowMessage($"You killed the NPC. -{playerKillPenalty} Score.");
+        }
+        else
+        {
+            GameFeedbackUI.Instance?.ShowMessage("The NPC died.");
+        }
 
         Destroy(gameObject, 1.5f);
     }
@@ -148,7 +169,16 @@ public class RescueNpc : MonoBehaviour, IDamageable
         {
             scoreManager.AddScore(scoreReward);
         }
+    }
 
+    private void ApplyPlayerKillPenalty()
+    {
+        ScoreManager scoreManager = FindFirstObjectByType<ScoreManager>();
+
+        if (scoreManager != null)
+        {
+            scoreManager.RemoveScore(playerKillPenalty);
+        }
     }
 
     private void OnDrawGizmosSelected()

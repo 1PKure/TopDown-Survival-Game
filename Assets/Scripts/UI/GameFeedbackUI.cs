@@ -15,6 +15,9 @@ public class GameFeedbackUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI enemiesAliveText;
     [SerializeField] private TextMeshProUGUI ammoText;
 
+    [Header("High Score UI")]
+    [SerializeField] private TextMeshProUGUI highScoreText;
+
     [Header("Health UI")]
     [SerializeField] private RectTransform healthFillRect;
     [SerializeField] private TextMeshProUGUI healthText;
@@ -132,6 +135,14 @@ public class GameFeedbackUI : MonoBehaviour
         {
             messageText.text = string.Empty;
             messageText.gameObject.SetActive(false);
+        }
+    }
+
+    public void SetHighScore(int highScore)
+    {
+        if (highScoreText != null)
+        {
+            highScoreText.text = $"High Score: {highScore}";
         }
     }
 }

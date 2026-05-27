@@ -3,17 +3,35 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    private bool isGameOver;
+    [Header("References")]
     [SerializeField] private EnemySpawner enemySpawner;
+    [SerializeField] private EndGameUI endGameUI;
+    [SerializeField] private ScoreManager scoreManager;
+
+    private bool isGameOver;
+
     public bool IsGameOver => isGameOver;
+
+    private void Awake()
+    {
+        if (enemySpawner == null)
+        {
+            enemySpawner = FindFirstObjectByType<EnemySpawner>();
+        }
+
+        if (endGameUI == null)
+        {
+            endGameUI = FindFirstObjectByType<EndGameUI>();
+        }
+
+        if (scoreManager == null)
+        {
+            scoreManager = FindFirstObjectByType<ScoreManager>();
+        }
+    }
 
     public void GameOver()
     {
-        if (enemySpawner != null)
-        {
-            enemySpawner.StopSpawning();
-        }
-        
         if (isGameOver)
         {
             return;
@@ -21,17 +39,33 @@ public class GameManager : MonoBehaviour
 
         isGameOver = true;
 
+        if (enemySpawner != null)
+        {
+            enemySpawner.StopSpawning();
+        }
+
+        if (scoreManager != null)
+        {
+            scoreManager.TryUpdateHighScore();
+        }
+
+        if (endGameUI != null)
+        {
+            endGameUI.ShowGameOver();
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: EndGameUI reference is missing.");
+            Time.timeScale = 0f;
+        }
+
         Debug.Log("GAME OVER");
-
-        Time.timeScale = 0f;
-
-        // Later:
-        // gameOverPanel.SetActive(true);
     }
 
     public void RestartGame()
     {
         Time.timeScale = 1f;
+
         Scene currentScene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(currentScene.buildIndex);
     }
@@ -40,5 +74,9 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         Application.Quit();
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#endif
     }
 }

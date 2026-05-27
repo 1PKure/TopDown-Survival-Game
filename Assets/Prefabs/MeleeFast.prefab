@@ -18,7 +18,7 @@ GameObject:
   - component: {fileID: -2507826637607469780}
   - component: {fileID: -8328974773702544463}
   - component: {fileID: -8559316471913328154}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: MeleeFast
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -18,7 +18,7 @@ GameObject:
   - component: {fileID: -5801492499727380914}
   - component: {fileID: 1271686339497849804}
   - component: {fileID: -699142874183625894}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: RangedFast
   m_TagString: Untagged
   m_Icon: {fileID: 0}

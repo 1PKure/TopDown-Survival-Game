@@ -3,8 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(HealthComponent))]
 public class PlayerDeathHandler : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField] private PlayerMovement playerMovement;
+    [SerializeField] private GameManager gameManager;
 
     private HealthComponent healthComponent;
 
@@ -12,36 +11,37 @@ public class PlayerDeathHandler : MonoBehaviour
     {
         healthComponent = GetComponent<HealthComponent>();
 
-        if (playerMovement == null)
+        if (gameManager == null)
         {
-            playerMovement = GetComponent<PlayerMovement>();
+            gameManager = FindFirstObjectByType<GameManager>();
         }
     }
 
     private void OnEnable()
     {
-        healthComponent.OnDeath += HandleDeath;
+        if (healthComponent != null)
+        {
+            healthComponent.OnDeath += HandlePlayerDeath;
+        }
     }
 
     private void OnDisable()
     {
-        healthComponent.OnDeath -= HandleDeath;
+        if (healthComponent != null)
+        {
+            healthComponent.OnDeath -= HandlePlayerDeath;
+        }
     }
 
-    private void HandleDeath()
+    private void HandlePlayerDeath()
     {
-        Debug.Log("Game Over: Player died.");
-
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
-
-        GameManager gameManager = FindFirstObjectByType<GameManager>();
-
         if (gameManager != null)
         {
             gameManager.GameOver();
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: GameManager reference is missing.");
         }
     }
 }

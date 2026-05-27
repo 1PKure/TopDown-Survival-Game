@@ -96,8 +96,6 @@ public class PlayerAmmo : MonoBehaviour
         currentReserveAmmo = Mathf.Clamp(currentReserveAmmo, 0, maxReserveAmmo);
 
         UpdateAmmoUI();
-
-        GameFeedbackUI.Instance?.ShowMessage($"+{amount} Ammo");
     }
 
     private IEnumerator ReloadRoutine()

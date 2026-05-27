@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -6,6 +7,12 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float gravity = -20f;
+
+    [Header("Dash")]
+    [SerializeField] private KeyCode dashKey = KeyCode.LeftShift;
+    [SerializeField] private float dashSpeed = 14f;
+    [SerializeField] private float dashDuration = 0.18f;
+    [SerializeField] private float dashCooldown = 1f;
 
     [Header("Aim")]
     [SerializeField] private Camera mainCamera;
@@ -16,6 +23,10 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 verticalVelocity;
 
     private float currentSpeedMultiplier = 1f;
+    private Vector3 lastMoveDirection = Vector3.forward;
+
+    private bool isDashing;
+    private float lastDashTime = -999f;
 
     private void Awake()
     {
@@ -29,21 +40,82 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
-        HandleMovement();
+        HandleDashInput();
+
+        if (!isDashing)
+        {
+            HandleMovement();
+        }
+
         HandleAimRotation();
         ApplyGravity();
     }
 
     private void HandleMovement()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        Vector3 moveDirection = GetInputDirection();
 
-        Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
+        if (moveDirection.sqrMagnitude > 0.01f)
+        {
+            lastMoveDirection = moveDirection;
+        }
 
         float finalMoveSpeed = moveSpeed * currentSpeedMultiplier;
 
         characterController.Move(moveDirection * finalMoveSpeed * Time.deltaTime);
+    }
+
+    private void HandleDashInput()
+    {
+        if (isDashing)
+        {
+            return;
+        }
+
+        if (!Input.GetKeyDown(dashKey))
+        {
+            return;
+        }
+
+        if (Time.time < lastDashTime + dashCooldown)
+        {
+            return;
+        }
+
+        Vector3 dashDirection = GetInputDirection();
+
+        if (dashDirection.sqrMagnitude < 0.01f)
+        {
+            dashDirection = lastMoveDirection;
+        }
+
+        StartCoroutine(DashRoutine(dashDirection.normalized));
+    }
+
+    private IEnumerator DashRoutine(Vector3 dashDirection)
+    {
+        isDashing = true;
+        lastDashTime = Time.time;
+
+        float timer = 0f;
+
+        while (timer < dashDuration)
+        {
+            characterController.Move(dashDirection * dashSpeed * Time.deltaTime);
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        isDashing = false;
+    }
+
+    private Vector3 GetInputDirection()
+    {
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+
+        return new Vector3(horizontal, 0f, vertical).normalized;
     }
 
     private void HandleAimRotation()

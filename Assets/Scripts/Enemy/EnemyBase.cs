@@ -30,6 +30,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected NavMeshAgent agent;
     private bool isDead;
+    private bool wasRegisteredAsAlive;
     public bool IsDead => isDead;
     protected HealthComponent healthComponent;
     protected IDamageable targetDamageable;
@@ -74,6 +75,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Start()
     {
+        RegisterAsAlive();
         ResolveTargetDamageable();
 
         if (healthComponent != null)
@@ -97,6 +99,8 @@ public abstract class EnemyBase : MonoBehaviour
         {
             healthComponent.OnDeath -= HandleDeath;
         }
+
+        UnregisterAsAliveIfNeeded();
     }
 
     public void ResolveTargetDamageable()
@@ -432,7 +436,7 @@ public abstract class EnemyBase : MonoBehaviour
         }
 
         isDead = true;
-        GameFeedbackUI.Instance?.RemoveEnemy();
+        UnregisterAsAliveIfNeeded();
         StopMovement();
 
         SetChasing(false);
@@ -447,6 +451,28 @@ public abstract class EnemyBase : MonoBehaviour
         }
 
         Destroy(gameObject, destroyDelay);
+    }
+
+    private void RegisterAsAlive()
+    {
+        if (wasRegisteredAsAlive)
+        {
+            return;
+        }
+
+        wasRegisteredAsAlive = true;
+        GameFeedbackUI.Instance?.AddEnemy();
+    }
+
+    private void UnregisterAsAliveIfNeeded()
+    {
+        if (!wasRegisteredAsAlive)
+        {
+            return;
+        }
+
+        wasRegisteredAsAlive = false;
+        GameFeedbackUI.Instance?.RemoveEnemy();
     }
 
     protected virtual void OnDrawGizmosSelected()

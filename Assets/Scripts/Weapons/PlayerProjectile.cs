@@ -53,6 +53,21 @@ public class PlayerProjectile : MonoBehaviour
         {
             return;
         }
+
+        RescueNpc rescueNpc = other.GetComponent<RescueNpc>();
+
+        if (rescueNpc == null)
+        {
+            rescueNpc = other.GetComponentInParent<RescueNpc>();
+        }
+
+        if (rescueNpc != null && !rescueNpc.IsDead)
+        {
+            rescueNpc.TakeDamageFromPlayer(damage);
+            Destroy(gameObject);
+            return;
+        }
+
         IDamageable damageable = other.GetComponent<IDamageable>();
 
         if (damageable == null)

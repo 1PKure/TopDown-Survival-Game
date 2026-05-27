@@ -8,12 +8,19 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField] private Transform player;
     [SerializeField] private Transform[] patrolPoints;
 
-    [Header("Enemy Prefabs")]
+    [Header("Normal Enemy Prefabs")]
     [SerializeField] private GameObject meleeEnemyPrefab;
     [SerializeField] private GameObject rangedEnemyPrefab;
 
-    [Header("Spawn Points")]
+    [Header("Fast Enemy Prefabs")]
+    [SerializeField] private GameObject fastMeleeEnemyPrefab;
+    [SerializeField] private GameObject fastRangedEnemyPrefab;
+
+    [Header("Normal Spawn Points")]
     [SerializeField] private Transform[] spawnPoints;
+
+    [Header("Fast Only Spawn Points")]
+    [SerializeField] private Transform[] fastOnlySpawnPoints;
 
     [Header("Spawn Settings")]
     [SerializeField] private float initialSpawnInterval = 4f;
@@ -27,10 +34,21 @@ public class EnemySpawner : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float rangedSpawnChance = 0.3f;
 
+    [Range(0f, 1f)]
+    [SerializeField] private float fastOnlySpawnChance = 0.25f;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float fastRangedSpawnChance = 0.2f;
+
+    [Header("Initial Fast Spawn")]
+    [SerializeField] private bool spawnFastEnemyOnStart = true;
+    [SerializeField] private float initialFastSpawnDelay = 1f;
+
     private float currentSpawnInterval;
     private int aliveEnemies;
     private Coroutine spawnRoutine;
     private Coroutine difficultyRoutine;
+    private Coroutine initialFastSpawnRoutine;
     private bool isSpawning;
 
     private void Start()
@@ -50,6 +68,11 @@ public class EnemySpawner : MonoBehaviour
 
         spawnRoutine = StartCoroutine(SpawnLoop());
         difficultyRoutine = StartCoroutine(DifficultyLoop());
+
+        if (spawnFastEnemyOnStart)
+        {
+            initialFastSpawnRoutine = StartCoroutine(InitialFastSpawnRoutine());
+        }
     }
 
     public void StopSpawning()
@@ -65,6 +88,26 @@ public class EnemySpawner : MonoBehaviour
         {
             StopCoroutine(difficultyRoutine);
         }
+
+        if (initialFastSpawnRoutine != null)
+        {
+            StopCoroutine(initialFastSpawnRoutine);
+        }
+    }
+
+    private IEnumerator InitialFastSpawnRoutine()
+    {
+        yield return new WaitForSeconds(initialFastSpawnDelay);
+
+        if (!isSpawning)
+        {
+            yield break;
+        }
+
+        if (CanSpawnFastEnemy())
+        {
+            SpawnFastEnemy();
+        }
     }
 
     private IEnumerator SpawnLoop()
@@ -73,10 +116,20 @@ public class EnemySpawner : MonoBehaviour
         {
             yield return new WaitForSeconds(currentSpawnInterval);
 
-            if (CanSpawn())
+            if (!CanSpawn())
             {
-                SpawnEnemy();
-                GameFeedbackUI.Instance?.AddEnemy();
+                continue;
+            }
+
+            bool shouldSpawnFastEnemy = Random.value <= fastOnlySpawnChance;
+
+            if (shouldSpawnFastEnemy && CanSpawnFastEnemy())
+            {
+                SpawnFastEnemy();
+            }
+            else
+            {
+                SpawnNormalEnemy();
             }
         }
     }
@@ -101,37 +154,121 @@ public class EnemySpawner : MonoBehaviour
             return false;
         }
 
-        if (spawnPoints == null || spawnPoints.Length == 0)
+        if (!HasAnyNormalEnemyPrefab() && !HasAnyFastEnemyPrefab())
         {
-            Debug.LogWarning($"{name}: No spawn points assigned.");
+            Debug.LogWarning($"{name}: No enemy prefabs assigned.");
             return false;
         }
 
-        if (meleeEnemyPrefab == null && rangedEnemyPrefab == null)
+        if (!HasAnyNormalSpawnPoint() && !HasAnyFastOnlySpawnPoint())
         {
-            Debug.LogWarning($"{name}: No enemy prefabs assigned.");
+            Debug.LogWarning($"{name}: No spawn points assigned.");
             return false;
         }
 
         return true;
     }
 
-    private void SpawnEnemy()
+    private bool CanSpawnNormalEnemy()
     {
-        Transform spawnPoint = GetValidSpawnPoint();
+        if (aliveEnemies >= maxAliveEnemies)
+        {
+            return false;
+        }
+
+        return HasAnyNormalEnemyPrefab() && HasAnyNormalSpawnPoint();
+    }
+
+    private bool CanSpawnFastEnemy()
+    {
+        if (aliveEnemies >= maxAliveEnemies)
+        {
+            return false;
+        }
+
+        return HasAnyFastEnemyPrefab() && HasAnyFastOnlySpawnPoint();
+    }
+
+    private bool HasAnyNormalEnemyPrefab()
+    {
+        return meleeEnemyPrefab != null || rangedEnemyPrefab != null;
+    }
+
+    private bool HasAnyFastEnemyPrefab()
+    {
+        return fastMeleeEnemyPrefab != null || fastRangedEnemyPrefab != null;
+    }
+
+    private bool HasAnyNormalSpawnPoint()
+    {
+        return spawnPoints != null && spawnPoints.Length > 0;
+    }
+
+    private bool HasAnyFastOnlySpawnPoint()
+    {
+        return fastOnlySpawnPoints != null && fastOnlySpawnPoints.Length > 0;
+    }
+
+    private void SpawnNormalEnemy()
+    {
+        if (!CanSpawnNormalEnemy())
+        {
+            if (CanSpawnFastEnemy())
+            {
+                SpawnFastEnemy();
+            }
+
+            return;
+        }
+
+        Transform spawnPoint = GetValidSpawnPoint(spawnPoints);
 
         if (spawnPoint == null)
         {
             return;
         }
 
-        GameObject prefab = ChooseEnemyPrefab();
+        GameObject prefab = ChooseNormalEnemyPrefab();
 
         if (prefab == null)
         {
             return;
         }
 
+        SpawnEnemy(prefab, spawnPoint);
+    }
+
+    private void SpawnFastEnemy()
+    {
+        if (!CanSpawnFastEnemy())
+        {
+            if (CanSpawnNormalEnemy())
+            {
+                SpawnNormalEnemy();
+            }
+
+            return;
+        }
+
+        Transform spawnPoint = GetValidSpawnPoint(fastOnlySpawnPoints);
+
+        if (spawnPoint == null)
+        {
+            return;
+        }
+
+        GameObject prefab = ChooseFastEnemyPrefab();
+
+        if (prefab == null)
+        {
+            return;
+        }
+
+        SpawnEnemy(prefab, spawnPoint);
+    }
+
+    private void SpawnEnemy(GameObject prefab, Transform spawnPoint)
+    {
         Vector3 spawnPosition = GetValidNavMeshPosition(spawnPoint.position);
 
         GameObject enemyInstance = Instantiate(
@@ -146,13 +283,18 @@ public class EnemySpawner : MonoBehaviour
         aliveEnemies++;
     }
 
-    private Transform GetValidSpawnPoint()
+    private Transform GetValidSpawnPoint(Transform[] availableSpawnPoints)
     {
+        if (availableSpawnPoints == null || availableSpawnPoints.Length == 0)
+        {
+            return null;
+        }
+
         const int maxAttempts = 20;
 
         for (int i = 0; i < maxAttempts; i++)
         {
-            Transform candidate = spawnPoints[Random.Range(0, spawnPoints.Length)];
+            Transform candidate = availableSpawnPoints[Random.Range(0, availableSpawnPoints.Length)];
 
             if (candidate == null)
             {
@@ -172,10 +314,10 @@ public class EnemySpawner : MonoBehaviour
             }
         }
 
-        return spawnPoints[Random.Range(0, spawnPoints.Length)];
+        return availableSpawnPoints[Random.Range(0, availableSpawnPoints.Length)];
     }
 
-    private GameObject ChooseEnemyPrefab()
+    private GameObject ChooseNormalEnemyPrefab()
     {
         bool shouldSpawnRanged = Random.value <= rangedSpawnChance;
 
@@ -190,6 +332,23 @@ public class EnemySpawner : MonoBehaviour
         }
 
         return rangedEnemyPrefab;
+    }
+
+    private GameObject ChooseFastEnemyPrefab()
+    {
+        bool shouldSpawnFastRanged = Random.value <= fastRangedSpawnChance;
+
+        if (shouldSpawnFastRanged && fastRangedEnemyPrefab != null)
+        {
+            return fastRangedEnemyPrefab;
+        }
+
+        if (fastMeleeEnemyPrefab != null)
+        {
+            return fastMeleeEnemyPrefab;
+        }
+
+        return fastRangedEnemyPrefab;
     }
 
     private Vector3 GetValidNavMeshPosition(Vector3 desiredPosition)
@@ -237,21 +396,27 @@ public class EnemySpawner : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (spawnPoints == null)
+        DrawSpawnPointGizmos(spawnPoints, Color.green, 0.5f);
+        DrawSpawnPointGizmos(fastOnlySpawnPoints, Color.cyan, 0.65f);
+    }
+
+    private void DrawSpawnPointGizmos(Transform[] points, Color color, float radius)
+    {
+        if (points == null)
         {
             return;
         }
 
-        Gizmos.color = Color.green;
+        Gizmos.color = color;
 
-        foreach (Transform spawnPoint in spawnPoints)
+        foreach (Transform point in points)
         {
-            if (spawnPoint == null)
+            if (point == null)
             {
                 continue;
             }
 
-            Gizmos.DrawWireSphere(spawnPoint.position, 0.5f);
+            Gizmos.DrawWireSphere(point.position, radius);
         }
     }
 }

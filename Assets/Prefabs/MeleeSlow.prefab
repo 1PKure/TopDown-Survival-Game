@@ -18,7 +18,7 @@ GameObject:
   - component: {fileID: 2897043460443465461}
   - component: {fileID: -5615746507848460284}
   - component: {fileID: -50773815515623570}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: MeleeSlow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
